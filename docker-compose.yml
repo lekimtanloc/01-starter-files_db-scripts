@@ -1,0 +1,48 @@
+services:
+  mariadb:
+    image: mariadb:11.4
+    container_name: mariadb
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: full-stack-ecommerce
+      MYSQL_USER: ecommerceapp
+      MYSQL_PASSWORD: StrongPa55WorD
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb -uroot -p$${MYSQL_ROOT_PASSWORD} -e 'SELECT 1' || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
+    networks:
+      - app_net          
+
+  db-init:
+    image: lekimtanloc/01-starter-files_db-scripts:v1
+    container_name: db-init
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      DB_NAME: full-stack-ecommerce
+      SQL_DIR: /init/sql
+    restart: "no"
+    volumes:
+      - ./sql:/init/sql:ro
+    networks:
+      - app_net         
+
+volumes:
+  mariadb_data:
+
+networks:
+  app_net:
+    external: true       
