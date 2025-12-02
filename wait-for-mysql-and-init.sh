@@ -12,6 +12,17 @@ MAX_RETRIES=${MAX_RETRIES:-30}
 
 RETRY_COUNT=0
 
+# Thêm biến chung cho option MySQL (tắt SSL)
+MYSQL_BASE_CMD=(
+  mysql
+  -h"$DB_HOST"
+  -P"$DB_PORT"
+  -u"$DB_USERNAME"
+  -p"$DB_PASSWORD"
+  --protocol=TCP
+  --ssl=0         # <--- QUAN TRỌNG: tắt SSL
+)
+
 echo "--------------------------------------"
 echo "Waiting for MySQL to be ready..."
 echo "Host: $DB_HOST  Port: $DB_PORT"
@@ -21,8 +32,8 @@ echo "--------------------------------------"
 # ---- Wait for MySQL ----
 while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
   echo "Attempting to connect to MySQL at $DB_HOST (try $((RETRY_COUNT + 1))/$MAX_RETRIES)..."
-  if mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USERNAME" -p"$DB_PASSWORD" \
-    --protocol=TCP --connect-timeout=5 -e "SELECT 1;" &>/dev/null; then
+
+  if "${MYSQL_BASE_CMD[@]}" --connect-timeout=5 -e "SELECT 1;" &>/dev/null; then
     echo "Success: MySQL is up and running!"
     break
   fi
@@ -43,8 +54,7 @@ if [ -d "$SQL_DIR" ]; then
   for sql_file in "$SQL_DIR"/*.sql; do
     [ -f "$sql_file" ] || continue
     echo "Importing $sql_file ..."
-    mysql -h"$DB_HOST" -P"$DB_PORT" -u"$DB_USERNAME" -p"$DB_PASSWORD" \
-      --protocol=TCP --connect-timeout=10 "$DB_NAME" < "$sql_file"
+    "${MYSQL_BASE_CMD[@]}" --connect-timeout=10 "$DB_NAME" < "$sql_file"
   done
   echo "Success: All SQL files imported successfully."
 else

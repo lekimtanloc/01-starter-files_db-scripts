@@ -1,0 +1,56 @@
+{{- if .Values.dbInit.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        job-name: db-init
+    spec:
+      restartPolicy: Never
+
+      # --- WAIT FOR MARIADB BEFORE RUNNING JOB ---
+      initContainers:
+        - name: wait-for-mariadb
+          image: busybox
+          command:
+            - sh
+            - -c
+            - |
+              echo "Waiting for MariaDB to become ready..."
+              until nc -z mariadb {{ .Values.mariadb.port }}; do
+                echo "MariaDB not ready, retrying in 5 seconds..."
+                sleep 5
+              done
+              echo "MariaDB is ready!"
+
+      containers:
+        - name: db-init
+          image: "{{ .Values.dbInit.image }}"
+          env:
+            - name: DB_HOST
+              value: "mariadb"
+            - name: DB_PORT
+              value: "{{ .Values.mariadb.port }}"
+            - name: DB_USERNAME
+              value: "{{ .Values.dbInit.username }}"
+            - name: DB_PASSWORD
+              value: "{{ .Values.dbInit.password }}"
+            - name: DB_NAME
+              value: "{{ .Values.mariadb.database }}"
+            - name: SQL_DIR
+              value: "{{ .Values.dbInit.sqlDir }}"
+            - name: MAX_RETRIES
+              value: "{{ .Values.dbInit.maxRetries }}"
+          volumeMounts:
+            - name: sql-files
+              mountPath: /init/sql
+
+      volumes:
+        - name: sql-files
+          configMap:
+            name: db-sql-files
+{{- end }}
