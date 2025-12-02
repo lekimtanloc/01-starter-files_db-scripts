@@ -1,6 +1,0 @@
-apiVersion: v2
-name: 01-starter-files_db-scripts
-description: MariaDB + Init SQL Helm Chart
-type: application
-version: 1.0.0
-appVersion: "11.4"
